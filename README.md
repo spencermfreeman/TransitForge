@@ -30,14 +30,18 @@
 ## Data and Output
 #### Median of flat and bias frames are computed and mapped to a color plot as shown below:
 
-<div style="display: flex; justify-content: center;"> <img src="./static/master_frames.png" width="90.25%" alt="flat/bias"/> </div>
+<p align="center">
+  <img src="./static/master_frames.png" width="700" />
+</p>
 
 #### Comparison of uncalibrated and calibrated images (AstroImageJ window):
 
-<div style="display: flex; justify-content: center;"> <img src="./static/comparison.png" width="90.25%" alt="flat/bias"/> </div>
+<p align="center">
+  <img src="./static/comparison.png" width="700" />
+</p>
 
 #### Current Adjustments: These remove some background noise, apply lens/CCD corrections, reduce vignetting, and mitigate haze.
 
-<div style="display: flex; justify-content: space-between;"> 
-  <img src="./static/Qatar-5AIJ.png" width="45%" alt="Qatar-5 AstroImageJ"/> <img src="./static/Qatar-5.png" width="45%" alt="Qatar-5 Pipeline"/> 
-</div>
+<p align="center">
+  <img src="./static/Qatar-5.png" width="700" />
+</p>
