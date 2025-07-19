@@ -18,7 +18,13 @@
 ## GUI Preview
 
 <p align="center">
-  <img src="./static/gui.png" width="110" />
+  <img src="./static/file_io.png" width="700" />
+</p>
+<p align="center">
+  <img src="./static/photometry.png" width="700" />
+</p>
+<p align="center">
+  <img src="./static/plotting.png" width="700" />
 </p>
 
 ## Data and Output
