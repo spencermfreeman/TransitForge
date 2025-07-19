@@ -4,7 +4,8 @@ from PIL import ImageTk
 import threading
 import os
 import ast
-
+import glob
+from functools import partial
 from pipeline.calibration import Calibration
 from pipeline.photometry import Photometry
 from gui.image_load import ImageLoader
@@ -117,7 +118,7 @@ class AstroPipelineGUI(ttk.Frame):
     def __init__(self, master):
         super().__init__(master, padding="10")
         self.master = master
-        master.title("Astro FITS Pipeline - Configuration")
+        master.title("TransitForge - Configuration")
         master.geometry("950x800")
         self.pack(fill=tk.BOTH, expand=True)
         self.entries = {}
@@ -126,6 +127,9 @@ class AstroPipelineGUI(ttk.Frame):
         file_io_frame = ttk.LabelFrame(notebook, text="File I/O")
         notebook.add(file_io_frame, text="File I/O")
         
+        self.data_directory = None
+        self.frames = []
+        self.current_index = 0
     
         self.create_file_io_section(file_io_frame)
         photo_frame = ttk.LabelFrame(notebook, text="Photometry")
@@ -134,7 +138,7 @@ class AstroPipelineGUI(ttk.Frame):
         self.create_photometry_section(photo_frame)
         plot_frame = ttk.LabelFrame(notebook, text="Plotting")
         notebook.add(plot_frame, text="Plotting")
-        
+
         self.create_plotting_section(plot_frame)
         self.load_config_into_fields()
 
@@ -171,7 +175,24 @@ class AstroPipelineGUI(ttk.Frame):
         parent.grid_rowconfigure(99, weight=1)
         parent.grid_columnconfigure(0, weight=1)
 
+    ''' Photometry Tab Related '''
+    
     def create_photometry_section(self, parent):
+        # Explicit reference for Data Directory
+        lbl = ttk.Label(parent, text="Data Directory:")
+        lbl.grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+
+        self.data_dir_entry = ttk.Entry(parent, width=50)
+        self.data_dir_entry.grid(row=0, column=1, padx=5, pady=5)
+        self.entries["Data Directory"] = self.data_dir_entry
+
+        btn_browse = ttk.Button(parent, text="Browse", command=partial(self.browse_directory, self.data_dir_entry))
+        btn_browse.grid(row=0, column=2, padx=5, pady=5)
+
+        btn_load = ttk.Button(parent, text="Load Images", command=self.load_images)
+        btn_load.grid(row=1, column=1, columnspan=2, padx=5, pady=5)
+
+        # Photometry fields
         fields = [
             ("RA/DEC", "text"),
             ("Target Radius", "text"),
@@ -182,27 +203,75 @@ class AstroPipelineGUI(ttk.Frame):
         ]
         for i, (label_text, _) in enumerate(fields):
             lbl = ttk.Label(parent, text=label_text + ":")
-            lbl.grid(row=i, column=0, sticky=tk.W, padx=5, pady=5)
+            lbl.grid(row=i+2, column=0, sticky=tk.W, padx=5, pady=5)
             entry = ttk.Entry(parent, width=50)
-            entry.grid(row=i, column=1, padx=5, pady=5)
+            entry.grid(row=i+2, column=1, padx=5, pady=5)
             self.entries[label_text] = entry
-        
-        # Load and convert FITS to PIL image
-        image_load = ImageLoader()
-        img = image_load.fits_to_image("/Users/spencerfreeman/Desktop/pipeline_gui/test_data/Qatar-5b-0002_lrp.fit")
-        img = img.resize((400, 400))
-
-        # Convert to Tk-compatible image
-        self.tk_image = ImageTk.PhotoImage(img)
-
-        # Create and grid the image label
-        self.image_label = ttk.Label(parent, image=self.tk_image)
-        self.image_label.image = self.tk_image  # Prevent garbage collection
+            
+        # Placeholder for image display
+        self.image_label = ttk.Label(parent)
         self.image_label.grid(row=10, column=0, columnspan=3, pady=10, sticky="n")
         
-        parent.grid_rowconfigure(99, weight=1)
-        parent.grid_columnconfigure(0, weight=1)
+        nav_frame = ttk.Frame(parent)
+        nav_frame.grid(row=11, column=0, columnspan=3, pady=5, sticky="n")
 
+        self.prev_button = ttk.Button(nav_frame, text="←", command=self.show_prev_image)
+        self.next_button = ttk.Button(nav_frame, text="→", command=self.show_next_image)
+        self.image_counter = ttk.Label(nav_frame, text="(0/0)")
+
+        self.prev_button.pack(side="left", padx=10)
+        self.image_counter.pack(side="left", padx=10)
+        self.next_button.pack(side="left", padx=10)
+
+        # Enable left/right arrow key bindings
+        parent.bind_all("<Left>", lambda e: self.show_prev_image())
+        parent.bind_all("<Right>", lambda e: self.show_next_image())
+
+    def load_images(self):
+        """Loads images from the data directory."""
+        data_dir = self.entries["Data Directory"].get()
+        if not os.path.isdir(data_dir):
+            messagebox.showerror("Error", "Please select a valid data directory.")
+            return
+
+        fits_files = sorted(glob.glob(os.path.join(data_dir, "*.fit*")))
+        if not fits_files:
+            messagebox.showinfo("No Images", "No FITS files found in the selected directory.")
+            return
+
+        image_load = ImageLoader()
+        self.frames = [
+            (ImageTk.PhotoImage(image_load.fits_to_image(f).resize((400, 400))),f)
+            for f in fits_files
+        ]
+
+        self.image_index = 0
+        self.show_current_image()
+
+    def show_current_image(self):
+        if not self.frames:
+            return
+        current_image = self.frames[self.image_index][0]
+        self.image_label.config(image=current_image)
+        self.image_label.image = current_image
+        self.image_counter.config(text=self.get_image_counter_text())
+
+    def show_prev_image(self):
+        if hasattr(self, "frames") and self.frames:
+            self.image_index = (self.image_index - 1) % len(self.frames)
+            self.show_current_image()
+
+    def show_next_image(self):
+        if hasattr(self, "frames") and self.frames:
+            self.image_index = (self.image_index + 1) % len(self.frames)
+            self.show_current_image()
+
+    def get_image_counter_text(self):
+        if hasattr(self, "frames") and self.frames:
+            return f"{os.path.basename(self.frames[self.image_index][1])} ({self.image_index + 1} / {len(self.frames)})"
+        return "(0/0)"
+
+    ''' Plotting Section '''
     def create_plotting_section(self, parent):
         fields = [
             ("Main Plot Title (transit name)", "text"),
