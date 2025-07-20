@@ -2,7 +2,7 @@
 
 <p align="center">
   <img src="static/Pitt_Astrophysics_Logo.png" width="110" />
-  <img src="static/Pitt_Logo.png" width="250" />
+  <img src="static/Pitt_Logo.png" height="120" />
   <img src="static/STEPUP_logo_pure.png" width="110" />
 </p>
 
