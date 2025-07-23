@@ -1,34 +1,27 @@
 import os
 import glob
 import tkinter as tk
-from tkinter import ttk, scrolledtext, filedialog
+from tkinter import ttk, scrolledtext, filedialog, Toplevel, Canvas, PhotoImage
 from PIL import Image, ImageTk
 from astropy.io import fits
 import numpy as np
-
-class ImageLoader:
-    def fits_to_image(self, path):
-        hdul = fits.open(path)
-        data = hdul[0].data
-        hdul.close()
-
-        norm_data = (data - np.min(data)) / (np.max(data) - np.min(data)) * 255
-        img = Image.fromarray(norm_data.astype(np.uint8))
-        return img
+from gui.image_load import ImageLoader
+from gui.zoom import ZoomViewer
 
 class AstroPipelineGUI(ttk.Frame):
     def __init__(self, root):
         self.root = root
         self.root.title("TransitForge GUI")
-        self.root.geometry("1000x900")  # Bigger initial size
+        self.root.geometry("1000x900")
 
         self.entries = {}
-        self.frames = []
+        #index 0 for the image, index 1 for the label
+        self.frames = [(None, None)]
         self.current_frame_index = 0
 
         self.notebook = ttk.Notebook(root)
         self.notebook.pack(expand=True, fill="both")
-
+        self.zoom_window = None
         self.create_tabs()
 
     def create_tabs(self):
@@ -111,13 +104,17 @@ class AstroPipelineGUI(ttk.Frame):
             entry = ttk.Entry(parent, width=50)
             entry.grid(row=i+2, column=1, padx=5, pady=5, sticky="ew")
             self.entries[label_text] = entry
+            if "coordinates" in label_text.lower():
+                current_image = self.frames[self.current_frame_index][0]
+                ttk.Button(parent, text="Select", command=self.select_pix).grid(row=i+2, column=2, padx=5, pady=5) 
 
         # Placeholder image
         placeholder = Image.new("L", (400, 400), color=200)
         self.frames = [(ImageTk.PhotoImage(placeholder), "No Files Loaded")]
-        self.image_label = ttk.Label(parent, image=self.frames[0][0])
-        self.image_label.image = self.frames[0][0]
-        self.image_label.grid(row=10, column=0, columnspan=3, pady=10)
+        self.image_canvas = Canvas(parent, width=400, height=400, bg="black")
+        self.image_canvas.grid(row=10, column=0, columnspan=3, pady=10)
+        self.canvas_image_obj = self.image_canvas.create_image(0, 0, anchor="nw", image=self.frames[0][0])
+
 
         nav_frame = ttk.Frame(parent)
         nav_frame.grid(row=11, column=0, columnspan=3, pady=5)
@@ -140,12 +137,16 @@ class AstroPipelineGUI(ttk.Frame):
 
         image_load = ImageLoader()
         fits_files = sorted(glob.glob(os.path.join(directory, "*lrp.fit*")))
-        self.frames = [(ImageTk.PhotoImage(image_load.fits_to_image(f).resize((400, 400))), f) for f in fits_files]
+        self.frames = []
+        for f in fits_files:
+            img = image_load.fits_to_image(f).resize((400, 400))
+            tk_img = ImageTk.PhotoImage(img)
+            self.frames.append((tk_img, f, img))  #store (Tk version, filename, PIL.Image)
 
         if self.frames:
             self.current_frame_index = 0
-            self.image_label.configure(image=self.frames[0][0])
-            self.image_label.image = self.frames[0][0]
+            self.image_canvas.itemconfig(self.canvas_image_obj, image=self.frames[0][0])
+            self.image_canvas.image = self.frames[0][0]
             self.image_counter.configure(text=self.get_image_counter_text())
 
     def get_image_counter_text(self):
@@ -156,16 +157,26 @@ class AstroPipelineGUI(ttk.Frame):
     def show_prev_image(self):
         if self.frames and self.current_frame_index > 0:
             self.current_frame_index -= 1
-            self.image_label.configure(image=self.frames[self.current_frame_index][0])
-            self.image_label.image = self.frames[self.current_frame_index]
+            self.image_canvas.itemconfig(self.canvas_image_obj, image=self.frames[self.current_frame_index][0])
+            self.image_canvas.image = self.frames[self.current_frame_index][0]
             self.image_counter.configure(text=self.get_image_counter_text())
 
     def show_next_image(self):
         if self.frames and self.current_frame_index < len(self.frames) - 1:
             self.current_frame_index += 1
-            self.image_label.configure(image=self.frames[self.current_frame_index][0])
-            self.image_label.image = self.frames[self.current_frame_index]
+            self.image_canvas.itemconfig(self.canvas_image_obj, image=self.frames[self.current_frame_index][0])
+            self.image_canvas.image = self.frames[self.current_frame_index][0]
             self.image_counter.configure(text=self.get_image_counter_text())
+            
+    def select_pix(self):
+        if self.zoom_window is not None and tk.Toplevel.winfo_exists(self.zoom_window):
+            self.zoom_window.destroy()
+
+        if self.frames and self.frames[0][1] != "No Files Loaded":
+            current_pil_image = self.frames[self.current_frame_index][2]
+            zoom_view = ZoomViewer(self.image_canvas, current_pil_image)
+            self.zoom_center_x, self.zoom_center_y = zoom_view.cutout_x, zoom_view.cutout_y
+
 
     ''' results/plotting '''
     
