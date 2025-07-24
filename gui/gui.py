@@ -126,7 +126,7 @@ class AstroPipelineGUI(ttk.Frame):
         self.prev_button.pack(side="left", padx=10)
         self.image_counter.pack(side="left", padx=10)
         self.next_button.pack(side="left", padx=10)
-
+        
         parent.bind_all("<Left>", lambda e: self.show_prev_image())
         parent.bind_all("<Right>", lambda e: self.show_next_image())
 
@@ -170,16 +170,31 @@ class AstroPipelineGUI(ttk.Frame):
             
     def select_pix(self):
         if self.zoom_window is not None and tk.Toplevel.winfo_exists(self.zoom_window):
-            self.zoom_window.destroy()
+            self.zoom_window.close()
 
         if self.frames and self.frames[0][1] != "No Files Loaded":
             current_pil_image = self.frames[self.current_frame_index][2]
-            zoom_view = ZoomViewer(self.image_canvas, current_pil_image)
-            self.zoom_center_x, self.zoom_center_y = zoom_view.cutout_x, zoom_view.cutout_y
+
+            def on_select(x, y):
+                self.zoom_window.cutout_x = x
+                self.zoom_window.cutout_y = y
+                self.draw_subsection()
+
+            self.zoom_window = ZoomViewer(self.image_canvas, current_pil_image, on_select)
+
+
+    def draw_subsection(self):
+        if self.zoom_window and self.zoom_window.cutout_x is not None and self.zoom_window.cutout_y is not None:
+            x, y = self.zoom_window.cutout_x, self.zoom_window.cutout_y
+            half_size = 50  #for a 100x100 square on subsection, rescale needed for frames
+            x1, y1 = x - half_size, y - half_size
+            x2, y2 = x + half_size, y + half_size
+            self.image_canvas.delete("subsection")
+            self.image_canvas.create_rectangle(x1, y1, x2, y2, outline="white", width=1, tags="subsection")
 
 
     ''' results/plotting '''
-    
+
     def create_results_section(self, parent: ttk.Frame):
         parent.grid_columnconfigure(1, weight=1)
          

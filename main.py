@@ -1,6 +1,7 @@
 import tkinter as tk
 from gui.gui import AstroPipelineGUI
 
-root = tk.Tk()
-app = AstroPipelineGUI(root)
-root.mainloop()
+if __name__ == '__main__':
+    root = tk.Tk()
+    app = AstroPipelineGUI(root)
+    root.mainloop()

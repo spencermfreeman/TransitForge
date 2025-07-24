@@ -5,9 +5,10 @@ import numpy as np
 from gui.gui import ImageLoader
 
 class ZoomViewer:
-    def __init__(self, canvas, image, zoom_box=100, zoom_factor=4):
+    def __init__(self, canvas, image, on_select, zoom_box=100, zoom_factor=4):
         self.canvas = canvas
         self.image = image
+        self.on_select = on_select
         self.zoom_box = zoom_box
         self.zoom_factor = zoom_factor
         self.zoom_window = Toplevel()
@@ -23,7 +24,7 @@ class ZoomViewer:
         self.canvas.bind("<Motion>", self.update_zoom)
         self.canvas.bind("<Button-1>", self.store_click)
         
-        self.cutout_x, self.cutout_y = 0, 0 
+        self.cutout_x, self.cutout_y = None, None
 
     def update_zoom(self, event):
         x, y = event.x, event.y
@@ -42,6 +43,7 @@ class ZoomViewer:
     def store_click(self, event):
         self.cutout_x = event.x
         self.cutout_y = event.y
+        self.on_select(self.cutout_x, self.cutout_y)
         print(f"Mouse clicked at (x={event.x}, y={event.y})")
 
         
