@@ -5,7 +5,7 @@ import numpy as np
 from gui.gui import ImageLoader
 
 class ZoomViewer:
-    def __init__(self, canvas, image, on_select, zoom_box=100, zoom_factor=4):
+    def __init__(self, canvas, image, on_select, zoom_box=100, zoom_factor=4, selection_mode="Target Coordinates (pix)"):
         self.canvas = canvas
         self.image = image
         self.on_select = on_select
@@ -24,7 +24,14 @@ class ZoomViewer:
         self.canvas.bind("<Motion>", self.update_zoom)
         self.canvas.bind("<Button-1>", self.store_click)
         
+        #all of the coordinates needed to run pipeline, these are 400x400 coords, must map back to the original size. 
+        #default mode is select target, then one can select validation and others within the 400x400 subsection. 
+        self.selection_mode = selection_mode
         self.cutout_x, self.cutout_y = None, None
+        self.target_x, self.target_y = None, None
+        self.comparison_x, self.comparison_y = None, None
+        self.validation_x, self.validation_y = None, None
+        
 
     def update_zoom(self, event):
         x, y = event.x, event.y
@@ -41,12 +48,24 @@ class ZoomViewer:
         self.zoom_canvas.create_image(0, 0, image=self.tk_zoom, anchor="nw")
 
     def store_click(self, event):
-        self.cutout_x = event.x
-        self.cutout_y = event.y
+        if self.selection_mode == "Target Coordinates (pix)":
+            self.cutout_x, self.target_x = event.x, event.y
+            self.cutout_y, self.target_y = event.y, event.y
+        elif is_valid_event(event.x, event.y):
+            if self.selection_mode == "Comparison Coordinates (pix)":
+                self.comparison_x = event.x
+                self.comparison_y = event.y
+            elif self.selection_mode == "Comparison Coordinates (pix)":
+                self.validation_x = event.x
+                self.validation_y = event.y 
         self.on_select(self.cutout_x, self.cutout_y)
-        print(f"Mouse clicked at (x={event.x}, y={event.y})")
+        print(f"Mouse clicked at (x={self.cutout_x}, y={self.cutout_y})")
 
-        
+    def is_valid_event(self, event_x, event_y) -> bool:
+        return (event_x > self.cutout_x - self.zoom_box//2 and event_x < self.cutout_x  + self.zoom_box//2 and 
+                event_y > self.cutout_y - self.zoom_box//2 and event_y < self.cutout_y  + self.zoom_box//2)
+            
+            
 # Main app
 if __name__ == '__main__':
     root = Tk()
