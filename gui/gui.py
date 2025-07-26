@@ -173,17 +173,17 @@ class AstroPipelineGUI(ttk.Frame):
         if self.frames and self.frames[0][1] != "No Files Loaded":
             current_image = self.frames[self.current_frame_index][2]
 
-            def on_select(x, y):
-                self.zoom_window.cutout_x = x
-                self.zoom_window.cutout_y = y
+            def on_select(coordinates: tuple):
+                self.zoom_window.cutout_x = coordinates[0]
+                self.zoom_window.cutout_y = coordinates[1]
                 self.draw_subsection()
                 
             #determine if zoom_window has been initialized and manage behavior based on outcome.
             if not hasattr(self, "zoom_window") or not self.zoom_window: 
-                self.zoom_window = ZoomViewer(self.image_canvas, current_image, on_select, logger=self.log_text, )
+                self.zoom_window = ZoomViewer(self.image_canvas, current_image, on_select, logger=self.log_text, input_dict=self.entries)
             else:
                 self.zoom_window.image = current_image
-            print(mode_label)
+            print([value.get() if type(value) != tuple else value for value in self.entries.values()])
             self.zoom_window.set_mode(mode_label)
             
     def draw_subsection(self):
