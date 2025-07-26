@@ -5,7 +5,7 @@ import numpy as np
 from gui.gui import ImageLoader
 
 class ZoomViewer:
-    def __init__(self, canvas, image, on_select, zoom_box=100, zoom_factor=4, selection_mode="Target Coordinates (pix)"):
+    def __init__(self, canvas, image, on_select, logger, zoom_box=50, zoom_factor=4, selection_mode="Target Coordinates (pix)"):
         self.canvas = canvas
         self.image = image
         self.on_select = on_select
@@ -31,7 +31,7 @@ class ZoomViewer:
         self.target_x, self.target_y = None, None
         self.comparison_x, self.comparison_y = None, None
         self.validation_x, self.validation_y = None, None
-        
+        self.logger = logger
 
     def update_zoom(self, event):
         x, y = event.x, event.y
@@ -51,30 +51,38 @@ class ZoomViewer:
         if self.selection_mode == "Target Coordinates (pix)":
             self.cutout_x, self.target_x = event.x, event.y
             self.cutout_y, self.target_y = event.y, event.y
-        elif is_valid_event(event.x, event.y):
+            self.on_select(self.cutout_x, self.cutout_y)
+            #we must reset non-target selections, since an adjustment of target zoom area can lead to invalid previous selections (comp/vali)
+            self.reset_non_target()
+        elif self.is_valid_event(event.x, event.y):
             if self.selection_mode == "Comparison Coordinates (pix)":
                 self.comparison_x = event.x
                 self.comparison_y = event.y
             elif self.selection_mode == "Comparison Coordinates (pix)":
                 self.validation_x = event.x
                 self.validation_y = event.y 
-        self.on_select(self.cutout_x, self.cutout_y)
-        print(f"Mouse clicked at (x={self.cutout_x}, y={self.cutout_y})")
-
+        
+        log_message = f"PHOTOMETRY LOGGING: \nMode: {self.selection_mode}, \nMouse clicked at (x={self.cutout_x}, y={self.cutout_y}), \nValid Selection: {self.is_valid_event(event.x, event.y)}\n"
+        self.logger.insert(END, log_message)
+        
     def is_valid_event(self, event_x, event_y) -> bool:
         return (event_x > self.cutout_x - self.zoom_box//2 and event_x < self.cutout_x  + self.zoom_box//2 and 
                 event_y > self.cutout_y - self.zoom_box//2 and event_y < self.cutout_y  + self.zoom_box//2)
-            
-            
-# Main app
+        
+    def set_mode(self, mode_label: str): 
+        self.selection_mode = mode_label 
+    
+    def reset_non_target(self):
+        self.comparison_x, self.comparison_y = None, None
+        self.validation_x, self.validation_y = None, None
+
 if __name__ == '__main__':
     root = Tk()
     canvas = Canvas(root, width=400, height=400)
     canvas.pack()
 
     img_load = ImageLoader()
-    image_path = "/Users/spencerfreeman/Desktop/TransitForge/TestingNotebooks/test_image/Qatar-5b-0001_lrp.fit"  # Replace with your image file
-    #pass the resized image
+    image_path = "/Users/spencerfreeman/Desktop/TransitForge/TestingNotebooks/test_image/Qatar-5b-0001_lrp.fit"  
     image = img_load.fits_to_image(image_path).resize((400, 400))
     photo = ImageTk.PhotoImage(image)
     canvas.create_image(0, 0, image=photo, anchor="nw")

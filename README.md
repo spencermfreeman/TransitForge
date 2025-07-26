@@ -13,7 +13,7 @@
 - Primary Goal: Production of exoplanet transit light curves.
 - Development: Ongoing work on a graphical user interface (GUI) and existing features, decrease overhead computation.
 - Target Data: The pipeline aims to support analysis of existing TESS data with libraries such as Astropy, the Photutils sub-package, and personal/group observational data.
-- Functionality: Designed to work similarly to AstroImageJ, but in a more condensed and streamlined manner.
+- Functionality: Designed to work similarly to AstroImageJ, but in a more condensed and streamlined manner, tailored to STEPUP operations.
   
 ## GUI Preview
 
@@ -22,6 +22,9 @@
 </p>
 <p align="center">
   <img src="./static/photometry.png" width="700" />
+</p>
+<p align="center">
+  <img src="./static/zoom_window.png" width="500" />
 </p>
 <p align="center">
   <img src="./static/plotting.png" width="700" />

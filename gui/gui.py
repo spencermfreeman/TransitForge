@@ -106,9 +106,10 @@ class AstroPipelineGUI(ttk.Frame):
             self.entries[label_text] = entry
             if "coordinates" in label_text.lower():
                 current_image = self.frames[self.current_frame_index][0]
-                ttk.Button(parent, text="Select", command=self.select_pix).grid(row=i+2, column=2, padx=5, pady=5) 
+                ttk.Button(parent, text="Select", 
+                           command=lambda m=label_text: self.select_pix(m)).grid(row=i+2, column=2, padx=5, pady=5) 
 
-        # Placeholder image
+        #placeholder image, 400x400
         placeholder = Image.new("L", (400, 400), color=200)
         self.frames = [(ImageTk.PhotoImage(placeholder), "No Files Loaded")]
         self.image_canvas = Canvas(parent, width=400, height=400, bg="black")
@@ -168,25 +169,27 @@ class AstroPipelineGUI(ttk.Frame):
             self.image_canvas.image = self.frames[self.current_frame_index][0]
             self.image_counter.configure(text=self.get_image_counter_text())
             
-    def select_pix(self):
-        if self.zoom_window is not None and tk.Toplevel.winfo_exists(self.zoom_window):
-            self.zoom_window.close()
-
+    def select_pix(self, mode_label):
         if self.frames and self.frames[0][1] != "No Files Loaded":
-            current_pil_image = self.frames[self.current_frame_index][2]
+            current_image = self.frames[self.current_frame_index][2]
 
             def on_select(x, y):
                 self.zoom_window.cutout_x = x
                 self.zoom_window.cutout_y = y
                 self.draw_subsection()
-
-            self.zoom_window = ZoomViewer(self.image_canvas, current_pil_image, on_select)
-
-
+                
+            #determine if zoom_window has been initialized and manage behavior based on outcome.
+            if not hasattr(self, "zoom_window") or not self.zoom_window: 
+                self.zoom_window = ZoomViewer(self.image_canvas, current_image, on_select, logger=self.log_text, )
+            else:
+                self.zoom_window.image = current_image
+            print(mode_label)
+            self.zoom_window.set_mode(mode_label)
+            
     def draw_subsection(self):
         if self.zoom_window and self.zoom_window.cutout_x is not None and self.zoom_window.cutout_y is not None:
             x, y = self.zoom_window.cutout_x, self.zoom_window.cutout_y
-            half_size = 50  #for a 100x100 square on subsection, rescale needed for frames
+            half_size = 25  #for a 50x50 square on subsection, rescale needed for frames
             x1, y1 = x - half_size, y - half_size
             x2, y2 = x + half_size, y + half_size
             self.image_canvas.delete("subsection")
