@@ -174,8 +174,7 @@ class AstroPipelineGUI(ttk.Frame):
             current_image = self.frames[self.current_frame_index][2]
 
             def on_select(coordinates: tuple):
-                self.zoom_window.cutout_x = coordinates[0]
-                self.zoom_window.cutout_y = coordinates[1]
+                self.zoom_window.coordinates["Target Coordinates (pix)"] = coordinates
                 self.draw_subsection()
                 
             #determine if zoom_window has been initialized and manage behavior based on outcome.
@@ -187,14 +186,13 @@ class AstroPipelineGUI(ttk.Frame):
             self.zoom_window.set_mode(mode_label)
             
     def draw_subsection(self):
-        if self.zoom_window and self.zoom_window.cutout_x is not None and self.zoom_window.cutout_y is not None:
-            x, y = self.zoom_window.cutout_x, self.zoom_window.cutout_y
+        if self.zoom_window and all(coord is not None for coord in self.zoom_window.coordinates["Target Coordinates (pix)"]):
+            x, y = self.zoom_window.coordinates["Target Coordinates (pix)"]
             half_size = 25  #for a 50x50 square on subsection, rescale needed for frames
             x1, y1 = x - half_size, y - half_size
             x2, y2 = x + half_size, y + half_size
             self.image_canvas.delete("subsection")
             self.image_canvas.create_rectangle(x1, y1, x2, y2, outline="white", width=1, tags="subsection")
-
 
     ''' results/plotting '''
 

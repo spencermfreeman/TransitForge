@@ -59,29 +59,24 @@ class ZoomViewer:
             self.on_select(self.coordinates[self.selection_mode])
             #we must reset non-target selections, since an adjustment of target zoom area can lead to invalid previous selections (comp/vali)
             self.reset_non_target()
-            entry = self.input_dict[self.selection_mode]
-            entry.delete(0, END)
-            entry.insert(0, f"{self.coordinates[self.selection_mode]}")
+            self.update_view()
         if self.selection_mode == "Comparison Coordinates (pix)":
             if self.is_valid_event(event.x, event.y):
                 self.coordinates[self.selection_mode] = (event.x, event.y)
-                entry = self.input_dict[self.selection_mode]
-                entry.delete(0, END)
-                entry.insert(0, f"{self.coordinates[self.selection_mode]}")
+                self.update_view()
         elif self.selection_mode == "Validation Coordinates (pix)":
             if self.is_valid_event(event.x, event.y):
                 self.coordinates[self.selection_mode] = (event.x, event.y)
-                entry = self.input_dict[self.selection_mode]
-                entry.delete(0, END)
-                entry.insert(0, f"{self.coordinates[self.selection_mode]}")
+                self.update_view()
         
         log_message = f"PHOTOMETRY LOGGING: \nMode: {self.selection_mode}, \nMouse clicked at (x={event.x}, y={event.y}), \nValid Selection: {self.is_valid_event(event.x, event.y)}\n"
         self.logger.insert(END, log_message)
         
     def is_valid_event(self, event_x, event_y) -> bool:
         zoom_center = self.coordinates["Target Coordinates (pix)"]
-        return (event_x > zoom_center[0] - self.zoom_box//2 and event_x < zoom_center[0]  + self.zoom_box//2 and 
-                event_y > zoom_center[1] - self.zoom_box//2 and event_y < zoom_center[1]  + self.zoom_box//2)
+        return (all(coord is not None for coord in zoom_center) and 
+                (zoom_center[0] - self.zoom_box//2 < event_x < zoom_center[0]  + self.zoom_box//2) and 
+                (zoom_center[1] - self.zoom_box//2 < event_y < zoom_center[1]  + self.zoom_box//2))
         
     def set_mode(self, mode_label: str): 
         self.selection_mode = mode_label 
@@ -92,6 +87,10 @@ class ZoomViewer:
         self.input_dict["Comparison Coordinates (pix)"].delete(0, END)
         self.input_dict["Validation Coordinates (pix)"].delete(0, END)
 
+    def update_view(self): 
+        entry = self.input_dict[self.selection_mode]
+        entry.delete(0, END)
+        entry.insert(0, f"{self.coordinates[self.selection_mode]}")
 
 if __name__ == '__main__':
     root = Tk()
