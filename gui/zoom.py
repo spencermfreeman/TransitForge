@@ -18,7 +18,6 @@ class ZoomViewer:
                                   width=zoom_box * zoom_factor,
                                   height=zoom_box * zoom_factor)
         self.zoom_canvas.pack()
-        self.zoom_image = None
         self.tk_zoom = None
 
         self.canvas.bind("<Motion>", self.update_zoom)
@@ -38,6 +37,8 @@ class ZoomViewer:
         self.validation_x, self.validation_y = None, None
         self.logger = logger
         self.input_dict = input_dict
+        self.target_radius = None
+        self.fallback_radius = 15
 
     def update_zoom(self, event):
         x, y = event.x, event.y
@@ -52,6 +53,7 @@ class ZoomViewer:
                                  self.zoom_box * self.zoom_factor), Image.NEAREST)
         self.tk_zoom = ImageTk.PhotoImage(zoomed)
         self.zoom_canvas.create_image(0, 0, image=self.tk_zoom, anchor="nw")
+        self.draw_aperture()
 
     def store_click(self, event):
         if self.selection_mode == "Target Coordinates (pix)":
@@ -68,9 +70,14 @@ class ZoomViewer:
             if self.is_valid_event(event.x, event.y):
                 self.coordinates[self.selection_mode] = (event.x, event.y)
                 self.update_view()
-        
+
         log_message = f"PHOTOMETRY LOGGING: \nMode: {self.selection_mode}, \nMouse clicked at (x={event.x}, y={event.y}), \nValid Selection: {self.is_valid_event(event.x, event.y)}\n"
         self.logger.insert(END, log_message)
+        
+        try: 
+            self.target_radius = int(self.input_dict["Target Radius"].get())
+        except:
+            self.logger.insert(END, f"Invalid Target Radius Input, Defaulting to {self.fallback_radius} pix\n")
         
     def is_valid_event(self, event_x, event_y) -> bool:
         zoom_center = self.coordinates["Target Coordinates (pix)"]
@@ -92,6 +99,28 @@ class ZoomViewer:
         entry.delete(0, END)
         entry.insert(0, f"{self.coordinates[self.selection_mode]}")
 
+    def draw_aperture(self):
+        try:
+            radius = int(self.input_dict["Target Radius"].get())
+        except:
+            radius = self.fallback_radius
+
+        if self.tk_zoom:
+            self.zoom_canvas.delete('all')
+            self.zoom_canvas.create_image(0, 0, image=self.tk_zoom, anchor="nw")
+            
+            cx, cy = self.tk_zoom.width() // 2, self.tk_zoom.height() // 2
+            x0, y0 = cx - radius, cy - radius
+            x1, y1 = cx + radius, cy + radius
+
+            color = {
+                "Target Coordinates (pix)": "white",
+                "Comparison Coordinates (pix)": "blue",
+                "Validation Coordinates (pix)": "yellow"
+            }.get(self.selection_mode, "black")
+            self.zoom_canvas.create_oval(x0, y0, x1, y1, outline=color, dash=(4, 2))
+
+        
 if __name__ == '__main__':
     root = Tk()
     canvas = Canvas(root, width=400, height=400)

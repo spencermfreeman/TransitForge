@@ -7,6 +7,8 @@ from astropy.io import fits
 import numpy as np
 from gui.image_load import ImageLoader
 from gui.zoom import ZoomViewer
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from gui.plot_gui import Plot
 
 class AstroPipelineGUI(ttk.Frame):
     def __init__(self, root):
@@ -105,7 +107,6 @@ class AstroPipelineGUI(ttk.Frame):
             entry.grid(row=i+2, column=1, padx=5, pady=5, sticky="ew")
             self.entries[label_text] = entry
             if "coordinates" in label_text.lower():
-                current_image = self.frames[self.current_frame_index][0]
                 ttk.Button(parent, text="Select", 
                            command=lambda m=label_text: self.select_pix(m)).grid(row=i+2, column=2, padx=5, pady=5) 
 
@@ -198,7 +199,7 @@ class AstroPipelineGUI(ttk.Frame):
 
     def create_results_section(self, parent: ttk.Frame):
         parent.grid_columnconfigure(1, weight=1)
-         
+            
         fields = [
             ("Main Plot Title (Transit Name)", "text"),
             ("Observation Date (MM/DD/YYYY)", "text"),
@@ -210,7 +211,20 @@ class AstroPipelineGUI(ttk.Frame):
             entry = ttk.Entry(parent, width=50)
             entry.grid(row=i+2, column=1, padx=5, pady=5, sticky="ew")
             self.entries[label_text] = entry
-    
+
+        # Sample data
+        target_flux = np.random.normal(1, 0.01, 100)
+        comp_flux = np.random.normal(1, 0.01, 100)
+        timeline = np.arange(len(target_flux))
+        
+        plotter = Plot(self.entries, timeline, target_flux, comp_flux)
+        
+        fig = plotter.generate_fig()
+        self.fig_canvas = FigureCanvasTkAgg(fig, master=parent)
+        self.fig_canvas.draw()
+        self.fig_canvas.get_tk_widget().grid(row=10, column=0, columnspan=3, pady=10)
+
+
     def start_pipeline(self):
         self.log_text.insert(tk.END, "[INFO] Pipeline started...\n")
 
