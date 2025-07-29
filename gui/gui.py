@@ -228,7 +228,7 @@ class AstroPipelineGUI(ttk.Frame):
 
         plotter = Plot(self.entries, timeline, target_flux, comp_flux)
         fig = plotter.generate_fig()
-        pil_image = plotter.save_fig_image(fig).resize((600, 600))
+        pil_image = plotter.save_fig_image(fig)
         self.tk_image = ImageTk.PhotoImage(pil_image)
 
         # Create image frame only once

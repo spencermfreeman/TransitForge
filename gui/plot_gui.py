@@ -7,11 +7,9 @@ class Plot:
     plt.rcParams['axes.labelsize'] = 9
     plt.rcParams['axes.titlesize'] = 9
     plt.rcParams['legend.fontsize'] = 9
-    suptitle_size = 11
+    suptitle_size = 13
     plt.rcParams['font.family'] = 'Georgia'
     plt.rcParams['text.usetex'] = False
-    
-    suptitle_size = 16
     
     def __init__(self, input_dict: dict, timeline: list, target_flux_rel_norm: list, validation_flux_norm: list):
         self.input_dict = input_dict
@@ -27,8 +25,8 @@ class Plot:
         observer = self.extract_input("Observer Name")
         date = self.extract_input("Observation Date (MM/DD/YYYY)")
         
-        ax.scatter(self.timeline, self.target_flux_rel_norm, color='black', marker='o', s=3, label=f"Target Star: {title}")
-        ax.scatter(self.timeline, self.validation_flux_norm, color='magenta', marker='o', s=3, label="Validation Star")
+        ax.scatter(self.timeline, self.target_flux_rel_norm, color='black', marker='o', s=2, label=f"Target Star: {title}")
+        ax.scatter(self.timeline, self.validation_flux_norm, color='magenta', marker='o', s=2, label="Validation Star")
         ax.plot([self.timeline[0], self.timeline[-1]], [1.0, 1.0], 'b-', linewidth=0.5)
 
 
@@ -36,7 +34,7 @@ class Plot:
         if title and observer and date:
             fig.suptitle(f"  {title}", fontsize=Plot.suptitle_size)
             
-        ax.set_title(f"{date}\nObserver(s): {observer}")
+        ax.set_title(f"{date}\nObservers: {observer}") if ',' in observer else ax.set_title(f"{date}\nObserver: {observer}")
         ax.set_xlabel("Julian Date (JD)")
         ax.set_ylabel("Relative Flux, Normalized")
      
@@ -58,7 +56,7 @@ class Plot:
 
     def save_fig_image(self, fig: plt.Figure) -> None:
         buffer = io.BytesIO()
-        fig.savefig(buffer, format='png', bbox_inches='tight', dpi=700)
+        fig.savefig(buffer, format='png', dpi=100)
         buffer.seek(0)
         image = Image.open(buffer)
         return image
