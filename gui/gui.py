@@ -7,7 +7,6 @@ from astropy.io import fits
 import numpy as np
 from gui.image_load import ImageLoader
 from gui.zoom import ZoomViewer
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from gui.plot_gui import Plot
 
 class AstroPipelineGUI(ttk.Frame):
@@ -198,8 +197,15 @@ class AstroPipelineGUI(ttk.Frame):
     ''' results/plotting '''
 
     def create_results_section(self, parent: ttk.Frame):
+        #Test Data
+        transit_data = {
+            'target_flux' : np.random.normal(1, 0.01, 100),
+            'comp_flux' : np.random.normal(1, 0.01, 100), 
+            'timeline' : np.arange(100)
+        }
+        
         parent.grid_columnconfigure(1, weight=1)
-            
+        
         fields = [
             ("Main Plot Title (Transit Name)", "text"),
             ("Observation Date (MM/DD/YYYY)", "text"),
@@ -212,18 +218,31 @@ class AstroPipelineGUI(ttk.Frame):
             entry.grid(row=i+2, column=1, padx=5, pady=5, sticky="ew")
             self.entries[label_text] = entry
 
-        # Sample data
-        target_flux = np.random.normal(1, 0.01, 100)
-        comp_flux = np.random.normal(1, 0.01, 100)
-        timeline = np.arange(len(target_flux))
-        
-        plotter = Plot(self.entries, timeline, target_flux, comp_flux)
-        
-        fig = plotter.generate_fig()
-        self.fig_canvas = FigureCanvasTkAgg(fig, master=parent)
-        self.fig_canvas.draw()
-        self.fig_canvas.get_tk_widget().grid(row=10, column=0, columnspan=3, pady=10)
+        update_button = ttk.Button(parent, text="Plot", command=lambda: self.set_plot(transit_data))
+        update_button.grid(row=len(fields)+3, column=0, columnspan=2, pady=(10, 0))
 
+    def set_plot(self, transit_data: dict): 
+        timeline = transit_data['timeline']
+        comp_flux = transit_data['comp_flux']
+        target_flux = transit_data['target_flux']
+
+        plotter = Plot(self.entries, timeline, target_flux, comp_flux)
+        fig = plotter.generate_fig()
+        pil_image = plotter.save_fig_image(fig).resize((600, 600))
+        self.tk_image = ImageTk.PhotoImage(pil_image)
+
+        # Create image frame only once
+        if not hasattr(self, 'plot_image_frame'):
+            self.plot_image_frame = ttk.Frame(self.results_tab)
+            self.plot_image_frame.grid(row=20, column=0, columnspan=3, pady=20)
+            self.plot_image_frame.grid_columnconfigure(0, weight=1)
+
+        # Create or update the image label inside that frame
+        if not hasattr(self, 'plot_label'):
+            self.plot_label = ttk.Label(self.plot_image_frame, image=self.tk_image)
+            self.plot_label.grid(row=0, column=0)
+        else:
+            self.plot_label.configure(image=self.tk_image)
 
     def start_pipeline(self):
         self.log_text.insert(tk.END, "[INFO] Pipeline started...\n")
