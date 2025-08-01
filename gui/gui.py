@@ -9,7 +9,7 @@ from gui.image_load import ImageLoader
 from gui.zoom import ZoomViewer
 from gui.plot_gui import Plot
 
-class AstroPipelineGUI(ttk.Frame):
+class GUI(ttk.Frame):
     def __init__(self, root):
         self.root = root
         self.root.title("TransitForge GUI")
@@ -183,6 +183,7 @@ class AstroPipelineGUI(ttk.Frame):
             else:
                 self.zoom_window.image = current_image
             print([value.get() if type(value) != tuple else value for value in self.entries.values()])
+            print(self.entries.keys())
             self.zoom_window.set_mode(mode_label)
             
     def draw_subsection(self):
@@ -249,5 +250,5 @@ class AstroPipelineGUI(ttk.Frame):
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = AstroPipelineGUI(root)
+    app = GUI(root)
     root.mainloop()

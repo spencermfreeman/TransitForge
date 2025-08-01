@@ -9,20 +9,22 @@ import datetime
 import shutil
 
 class Calibration:
-    def __init__(self, directory: str, 
+    def __init__(self, science_frames:list, 
                  flip: bool, 
                  transit_name: str, 
                  bias_indication: str, 
                  flat_indication: str, 
-                 light_indication: str):
+                 light_indication: str,
+                 data_directory: str):
         
-        self.directory = directory
+        self.science_frames = science_frames
         self.flip = flip
         self.transit_name = transit_name
         self.bias_indication = bias_indication
         self.flat_indication = flat_indication
         self.light_indication = light_indication
         self.output_directory = None
+        self.directory = data_directory
 
     @staticmethod
     def inv_median(a) -> int:
@@ -40,8 +42,7 @@ class Calibration:
         return self.output_directory
 
     def create_master_frames(self) -> tuple[CCDData, CCDData]:
-        main_path = Path(self.directory)
-        files = ccdp.ImageFileCollection(main_path)
+        files = ccdp.ImageFileCollection(filenames=self.science_frames)
 
         biases = files.files_filtered(imagetyp='Bias Frame', include_path=True)
         flats = files.files_filtered(imagetyp='Flat Field', include_path=True)
@@ -50,7 +51,7 @@ class Calibration:
 
         master_bias = self.process_calibration(biases, calibrated_data, self.bias_indication)
         master_flat = self.process_calibration(flats, calibrated_data, self.flat_indication)
-        del files  # optional, for memory cleanup
+        del files
         return master_bias, master_flat
     
     def process_calibration(self,
@@ -82,14 +83,14 @@ class Calibration:
     def calibrate_light_frames(self, 
                                master_bias: CCDData, 
                                master_flat: CCDData, 
-                               target_coords_wcs: list):
+                               target_coords_wcs: tuple):
         
-        main_path = Path(self.directory)
-        files = ccdp.ImageFileCollection(main_path)
+        files = ccdp.ImageFileCollection(filenames=self.science_frames)
         # info read from the fits header:
         focal_length = self.get_focal_length_collection(files) # mm
         pixel_size = self.get_pixel_size(files)  # um
         
+        #TODO: why is this hardcoded (isnt it related to CCD and located in fits headaer?)
         pixscale = 206.265 * (pixel_size / focal_length)
         c = SkyCoord(target_coords_wcs[0], 
                      target_coords_wcs[1], 
@@ -107,12 +108,12 @@ class Calibration:
             reduced = ccdp.ccd_process(light_frame, 
                                        master_bias=master_bias, 
                                        master_flat=master_flat)
-            self.edit_header(reduced, ra, dec, pixscale, gain, readout_noise)
+            self.edit_header(reduced, ra, dec, gain, readout_noise)
             if self.flip:
                 reduced.data = np.flipud(reduced.data)
             reduced.data = reduced.data.astype('float32')
             light_frames.append(reduced)
-            reduced.write(self.output_directory / f"{self.transit_name}_{self.light_indication}_.fit", 
+            reduced.write(self.output_directory / f"{self.transit_name.strip('/')}_{i+1}_reduced_{self.light_indication}_.fit", 
                           overwrite=True)
         del files
         return light_frames
@@ -156,14 +157,12 @@ class Calibration:
         frame_combined = np.median(frame_data, axis=0)
         return np.mean(frame_combined), np.std(frame_combined) 
         
-    def edit_header(self, reduced, ra, dec, pixscale, gain, readout_noise):
+    def edit_header(self, reduced, ra, dec, gain, readout_noise):
         reduced.meta['epoch'] = 2000.0
         reduced.meta['CRVAL1'] = ra
         reduced.meta['CRVAL2'] = dec
         reduced.meta['CRPIX1'] = reduced.meta['NAXIS1'] / 2.0
         reduced.meta['CRPIX2'] = reduced.meta['NAXIS2'] / 2.0
-        reduced.meta['CDELT1'] = -pixscale / 3600.0
-        reduced.meta['CDELT2'] = pixscale / 3600.0
         reduced.meta['CTYPE1'] = 'RA---TAN'
         reduced.meta['CTYPE2'] = 'DEC--TAN'
         reduced.meta['GAIN'] = (gain, 'GAIN in e-/ADU')

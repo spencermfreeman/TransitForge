@@ -6,9 +6,11 @@ class DataLoader:
     def __init__(self, fp_to_input_data):
         self.path = fp_to_input_data
     
-    def get_science_paths(self, indicator) -> list:
-        files = glob.glob(os.path.join(self.path, f'*{indicator}*.fit*')) 
-        return files
+    def get_science_paths(self, indicator='') -> list:
+        if indicator is None:
+            return glob.glob(os.path.join(self.path, f'*.fit*'))
+        else: 
+            return glob.glob(os.path.join(self.path, f'*{indicator}*.fit*')) 
     
     
 if __name__ == '__main__':
