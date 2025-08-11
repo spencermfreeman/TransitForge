@@ -41,7 +41,6 @@ class PipelineDriver:
                     photometry_table = self.photometry.cutout_to_table(cutout_ccd_data, bkg, frame_ccd_data)
                     self.photometry.get_data(photometry_table)
                     print(self.photometry.data)
-                    break
             #Plot Results
         else: 
             print('Missing Entries')

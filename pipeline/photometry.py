@@ -238,23 +238,30 @@ class Photometry:
         self.data[field].append(value)
         self.data[f'{field}_error'].append(error)
 
-    def _transform_coordinates(self, raw_coordinates: tuple) -> tuple: 
+    #pass small coords in 400x400 scale from gui event
+    def _transform_coordinates(self, coord_type:str, coords_to_transform: tuple) -> tuple: 
         #scale 400x400 -> 4096x4096
-        x_large, y_large = self.scale_gui_coords_to_frames(raw_coordinates) 
+        x_target_large, y_target_large = self.scale_gui_coords_to_frames(self.target_coordinates_raw) 
+        x_transform_large, y_transform_large = self.scale_gui_coords_to_frames(coords_to_transform)
+        
         #shift to new coordinates (cutout centered on target star, 400x400)
-        return raw_coordinates
+        cutout_center_x, cutout_center_y = self.CUTOUT_SIZE[0]//2, self.CUTOUT_SIZE[1]//2
+        if coord_type == 'target': 
+            return (cutout_center_x, cutout_center_y)
+        else: 
+            return (x_transform_large-x_target_large+cutout_center_x, y_transform_large-y_target_large+cutout_center_y)
     
     def get_data(self, phot_table):
-        target_coords = self._transform_coordinates(self.target_coordinates_raw)
-        id_target = self._best_coord_match(phot_table, self.target_coordinates_raw)
+        target_coords = self._transform_coordinates('target', self.target_coordinates_raw)
+        id_target = self._best_coord_match(phot_table, target_coords)
         self._append_data("target", phot_table, id_target)
 
-        comparison_coordinates = self._transform_coordinates(self.comparison_coordinates_raw)
-        id_comparison = self._best_coord_match(phot_table, self.comparison_coordinates_raw)
+        comparison_coordinates = self._transform_coordinates('comparison', self.comparison_coordinates_raw)
+        id_comparison = self._best_coord_match(phot_table, comparison_coordinates)
         self._append_data("comparison", phot_table, id_comparison)
         
-        validation_coordinates = self._transform_coordinates(self.validation_coordinates_raw)
-        id_validation = self._best_coord_match(phot_table, self.validation_coordinates_raw)
+        validation_coordinates = self._transform_coordinates('validation', self.validation_coordinates_raw)
+        id_validation = self._best_coord_match(phot_table, validation_coordinates)
         self._append_data("validation", phot_table, id_validation)
         
     ######################################################################################################################################################################
