@@ -6,8 +6,15 @@
   <img src="static/STEPUP_logo_pure.png" width="110" />
 </p>
 
+| Index                                             | Description                                                             |
+| :------------------------------------------------ | :---------------------------------------------------------------------- |
+| [Pipeline Overview](#pipeline-overview)           | High level overview and basic dependencies                              |
+| [GUI Preview](#gui-preview)                       | Some snapshots of TransitForge gui                                      |
+| [Data and Output](#data-and-output)               | TransitForge I/O overview                                               |
+| [Credits](#credits)                               | Meet the team behind this                                               |
+| [License](#license)                               | License details                                                         |
 
-## Pipeline Overview
+# Pipeline Overview
 #### An image pipeline for the calibration and processing of FITS images, equipped with differential photometric techniques. Dependencies include Numpy/Matplotlib, Astropy/Photutils, and Pandas (details in requirements.txt).
 
 - Primary Goal: Production of exoplanet transit light curves.
@@ -15,7 +22,7 @@
 - Target Data: The pipeline aims to support analysis of existing TESS data with libraries such as Astropy, the Photutils sub-package, and personal/group observational data.
 - Functionality: Designed to work similarly to AstroImageJ, but in a more condensed and streamlined manner, tailored to STEPUP operations.
   
-## GUI Preview
+# GUI Preview
 
 <p align="center">
   <img src="./static/file_io.png" width="700" />
@@ -30,7 +37,7 @@
   <img src="./static/plotting.png" width="700" />
 </p>
 
-## Data and Output
+# Data and Output
 #### Median of flat and bias frames are computed and mapped to a color plot as shown below:
 
 <p align="center">
@@ -48,3 +55,7 @@
 <p align="center">
   <img src="./static/Qatar-5.png" width="700" />
 </p>
+
+# Credits
+
+# License
