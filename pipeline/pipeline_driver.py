@@ -1,7 +1,6 @@
 from data_load import DataLoader
 from calibration import Calibration
 from photometry import Photometry
-import io
 
 class PipelineDriver:
     def __init__(self, entries: dict):

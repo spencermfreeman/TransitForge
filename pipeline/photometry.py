@@ -18,7 +18,8 @@ import math
 matplotlib.use('Agg')
 
 class Photometry:
-    CUTOUT_SIZE = (400, 400)
+    GUI_IMAGE_SIZE = (400, 400)
+    CUTOUT_SIZE = (512, 512)
     def __init__(self,
                  output_dir: str, 
                  threshold_multiplier: float, 
@@ -47,7 +48,11 @@ class Photometry:
         self.dataframe = None
         self.data = {"target" : [], 
                      "comparison" : [], 
-                     "validation" : []} 
+                     "validation" : [],
+                     "target_error" : [], 
+                     "comparison_error" : [],
+                     "validation_error" : [],
+                     "jd" : []} 
     
     def background_subtract(self, file_path: str) -> tuple[CCDData, Background2D]: 
         data = CCDData.read(file_path, unit=u.adu)
@@ -79,23 +84,23 @@ class Photometry:
             self.wcs = None
             
 
-    def scale_frame_to_cutout(self, large_coordinates: tuple) -> tuple[float, float]:
-        """
-        Map full-frame coordinates to cutout-local coordinates.
-        large_coordinates: (x, y) in full frame.
-        Returns: (x_cutout, y_cutout)
-        """
-        if large_coordinates: 
-            x_large, y_large = large_coordinates
-            x_cutout, y_cutout = Photometry.CUTOUT_SIZE
-            x_frame, y_frame = self.full_frame_shape
-            x_small = int(x_large * (x_cutout/x_frame))
-            y_small = int(y_large * (y_cutout/y_frame))
-            return (x_small, y_small)
-        else: return None
+    # def scale_frame_to_cutout(self, large_coordinates: tuple) -> tuple[float, float]:
+    #     """
+    #     Map full-frame coordinates to cutout-local coordinates.
+    #     large_coordinates: (x, y) in full frame.
+    #     Returns: (x_cutout, y_cutout)
+    #     """
+    #     if large_coordinates: 
+    #         x_large, y_large = large_coordinates
+    #         x_cutout, y_cutout = Photometry.CUTOUT_SIZE
+    #         x_frame, y_frame = self.full_frame_shape
+    #         x_small = int(x_large * (x_cutout/x_frame))
+    #         y_small = int(y_large * (y_cutout/y_frame))
+    #         return (x_small, y_small)
+    #     else: return None
     
     
-    def scale_cutout_to_frames(self, small_coordinates: tuple) -> tuple[float, float]:
+    def scale_gui_coords_to_frames(self, small_coordinates: tuple) -> tuple[float, float]:
         """
         Map coordinates from the cutout frame (small, 400x400) back to full-frame coordinates (1200x1200).
         small_coordinates: (x, y) in cutout pixel space.
@@ -103,7 +108,7 @@ class Photometry:
         """
         
         if self.full_frame_shape:
-            x_cutout, y_cutout = Photometry.CUTOUT_SIZE
+            x_cutout, y_cutout = Photometry.GUI_IMAGE_SIZE
             x_frame, y_frame = self.full_frame_shape
             
             x_small, y_small = small_coordinates
@@ -113,8 +118,8 @@ class Photometry:
         else: return None
     
     def get_cutout(self, image_bkg_sub: CCDData) -> Cutout2D: 
-        coordinates = self.scale_cutout_to_frames(self.target_coordinates_raw)
-        cutout = Cutout2D(image_bkg_sub, position=coordinates, size=Photometry.CUTOUT_SIZE, wcs=self.wcs)
+        coordinates = self.scale_gui_coords_to_frames(self.target_coordinates_raw)
+        cutout = Cutout2D(image_bkg_sub, position=coordinates, size=Photometry.CUTOUT_SIZE)
         plt.imshow(cutout.data)
         plt.title('Cutout Data')
         plt.show()
@@ -174,7 +179,7 @@ class Photometry:
         # Extract background and its RMS for the same cutout region
         background = bkg.background
         background_rms = bkg.background_rms
-        target_coordinates = self.scale_cutout_to_frames(self.target_coordinates_raw)
+        target_coordinates = self.scale_gui_coords_to_frames(self.target_coordinates_raw)
         bg_cutout = Cutout2D(background, position=tuple(target_coordinates), size=Photometry.CUTOUT_SIZE)
         bg_rms_cutout = Cutout2D(background_rms, position=tuple(target_coordinates), size=Photometry.CUTOUT_SIZE)
 
@@ -211,7 +216,7 @@ class Photometry:
         to the given coordinate (x, y).
         """
         # Zip x and y columns into list of tuples
-        coords_list = list(zip(phot_table['xcenter'], phot_table['ycenter']))
+        coords_list = list(zip(phot_table['xcenter'].value, phot_table['ycenter'].value))
         
         # Compute distances and find index of minimum
         distances = [self._distance(table_coord, coord) for table_coord in coords_list]
@@ -221,25 +226,36 @@ class Photometry:
     def _distance(self, coord1: tuple, coord2: tuple) -> float: 
         return math.sqrt((coord2[0] - coord1[0])**2 + (coord2[1] - coord1[1])**2)
     
-    def _append_flux(self, star_type: str, phot_table: astropy.table.QTable, id: int):
+    def _append_data(self, field: str, phot_table: astropy.table.QTable, id: int):
         match_rows = phot_table[phot_table['id'] == id]
         if len(match_rows) == 0:
             raise ValueError(f"No row found with id={id}")
 
         # Extract aperture_sum_2 value (assuming one match)
-        flux_value = match_rows['aperture_sum_2'][0]
+        value = match_rows['aperture_sum_2'][0]
+        error = match_rows['aperture_sum_err_2'][0]
         
-        self.data[star_type].append(flux_value)
-        
+        self.data[field].append(value)
+        self.data[f'{field}_error'].append(error)
+
+    def _transform_coordinates(self, raw_coordinates: tuple) -> tuple: 
+        #scale 400x400 -> 4096x4096
+        x_large, y_large = self.scale_gui_coords_to_frames(raw_coordinates) 
+        #shift to new coordinates (cutout centered on target star, 400x400)
+        return raw_coordinates
+    
     def get_data(self, phot_table):
+        target_coords = self._transform_coordinates(self.target_coordinates_raw)
         id_target = self._best_coord_match(phot_table, self.target_coordinates_raw)
-        self._append_flux("target", id_target)
-        
+        self._append_data("target", phot_table, id_target)
+
+        comparison_coordinates = self._transform_coordinates(self.comparison_coordinates_raw)
         id_comparison = self._best_coord_match(phot_table, self.comparison_coordinates_raw)
-        self._append_flux("comparison", id_comparison)
+        self._append_data("comparison", phot_table, id_comparison)
         
+        validation_coordinates = self._transform_coordinates(self.validation_coordinates_raw)
         id_validation = self._best_coord_match(phot_table, self.validation_coordinates_raw)
-        self._append_flux("validation", id_validation)
+        self._append_data("validation", phot_table, id_validation)
         
     ######################################################################################################################################################################
     
