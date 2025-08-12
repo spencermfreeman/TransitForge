@@ -10,6 +10,8 @@ from gui.zoom import ZoomViewer
 from gui.plot_gui import Plot
 
 class GUI(ttk.Frame):
+    frame_rescale_dimensions = (400,400)
+    
     def __init__(self, root):
         self.root = root
         self.root.title("TransitForge GUI")
@@ -19,7 +21,7 @@ class GUI(ttk.Frame):
         #index 0 for the image, index 1 for the label
         self.frames = [(None, None)]
         self.current_frame_index = 0
-
+        
         self.notebook = ttk.Notebook(root)
         self.notebook.pack(expand=True, fill="both")
         self.zoom_window = None
@@ -110,9 +112,9 @@ class GUI(ttk.Frame):
                            command=lambda m=label_text: self.select_pix(m)).grid(row=i+2, column=2, padx=5, pady=5) 
 
         #placeholder image, 400x400
-        placeholder = Image.new("L", (400, 400), color=200)
+        placeholder = Image.new("L", GUI.frame_rescale_dimensions, color=200)
         self.frames = [(ImageTk.PhotoImage(placeholder), "No Files Loaded")]
-        self.image_canvas = Canvas(parent, width=400, height=400, bg="black")
+        self.image_canvas = Canvas(parent, width=GUI.frame_rescale_dimensions[0], height=GUI.frame_rescale_dimensions[1], bg="black")
         self.image_canvas.grid(row=10, column=0, columnspan=3, pady=10)
         self.canvas_image_obj = self.image_canvas.create_image(0, 0, anchor="nw", image=self.frames[0][0])
 
@@ -140,7 +142,7 @@ class GUI(ttk.Frame):
         fits_files = sorted(glob.glob(os.path.join(directory, "*lrp.fit*")))
         self.frames = []
         for f in fits_files:
-            img = image_load.fits_to_image(f).resize((400, 400))
+            img = image_load.fits_to_image(f).resize(GUI.frame_rescale_dimensions)
             tk_img = ImageTk.PhotoImage(img)
             self.frames.append((tk_img, f, img))  #store (Tk version, filename, PIL.Image)
 

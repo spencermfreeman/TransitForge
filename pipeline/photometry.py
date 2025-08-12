@@ -15,10 +15,11 @@ from astropy.time import Time
 from astropy.wcs import WCS
 import astropy.table
 import math
+
 matplotlib.use('Agg')
 
 class Photometry:
-    GUI_IMAGE_SIZE = (400, 400)
+    GUI_IMAGE_SIZE = (400,400)
     CUTOUT_SIZE = (512, 512)
     def __init__(self,
                  output_dir: str, 
@@ -37,9 +38,9 @@ class Photometry:
         self.frame_name = None
         
         #these should be the coordinates used when we take a 2d cutout with dimensions equal to that of the gui, centered on the target star from the user input
-        self.target_coordinates_raw = (235, 203)
-        self.comparison_coordinates_raw = (250, 190)
-        self.validation_coordinates_raw = (258, 218)
+        self.target_coordinates_raw = (234, 203)
+        self.comparison_coordinates_raw = (229, 221)
+        self.validation_coordinates_raw = (249, 190)
         
         self.full_frame_shape = None  # (ny, nx)
         self.cutout_origin = None  # (x0, y0) top-left of cutout in full frame
@@ -67,13 +68,13 @@ class Photometry:
                        filter_size=(3, 3), 
                        sigma_clip=sigma_clip, 
                        bkg_estimator=bkg_estimator)
-        self.update_frame_metadata(data)
+        self._update_frame_metadata(data)
         self.file_name = os.path.basename(file_path)
         return CCDData(data - bkg.background.astype(float), unit=u.adu), bkg
 
     # MAIN OPTIMIZATION: this should take dimensions of the subsection that contains target and comparison stars.
 
-    def update_frame_metadata(self, ccd: CCDData):
+    def _update_frame_metadata(self, ccd: CCDData):
         """Store full frame shape and WCS from CCDData for scaling/cutout."""
         self.full_frame_shape = ccd.data.shape  # (ny, nx)
         print(self.full_frame_shape)
@@ -100,7 +101,7 @@ class Photometry:
     #     else: return None
     
     
-    def scale_gui_coords_to_frames(self, small_coordinates: tuple) -> tuple[float, float]:
+    def _scale_gui_coords_to_frames(self, small_coordinates: tuple) -> tuple[float, float]:
         """
         Map coordinates from the cutout frame (small, 400x400) back to full-frame coordinates (1200x1200).
         small_coordinates: (x, y) in cutout pixel space.
@@ -118,26 +119,29 @@ class Photometry:
         else: return None
     
     def get_cutout(self, image_bkg_sub: CCDData) -> Cutout2D: 
-        coordinates = self.scale_gui_coords_to_frames(self.target_coordinates_raw)
+        coordinates = self._scale_gui_coords_to_frames(self.target_coordinates_raw)
         cutout = Cutout2D(image_bkg_sub, position=coordinates, size=Photometry.CUTOUT_SIZE)
         plt.imshow(cutout.data)
         plt.title('Cutout Data')
         plt.show()
         return cutout
     
-    def plot_apertures_on_cutout(self, cutout, apertures):
+    def plot_apertures_on_cutout(self, cutout, apertures, i, target_coord: tuple, comp_coord: tuple, vali_coord: tuple):
         """
         Pop up a matplotlib window showing the cutout with plotted apertures.
         """
-        fig, ax = plt.subplots(figsize=(6, 6))
+        _, ax = plt.subplots(figsize=(6, 6))
         norm = simple_norm(cutout.data, 'sqrt', percent=99)
-
+        ax.plot(target_coord[0], target_coord[1], 'o', color='yellow', markersize=6, label="Target")
+        ax.plot(comp_coord[0], comp_coord[1], 'o', color='cyan', markersize=6, label="Comparison")
+        ax.plot(vali_coord[0], vali_coord[1], 'o', color='magenta', markersize=6, label="Validation")
         ax.imshow(cutout.data, cmap='gray', norm=norm)
         for ap in apertures:
             ap.plot(color='red', lw=1.0, alpha=0.6, axes=ax)
-
+    
+        ax.legend(loc="upper right")
         ax.set_title("Detected Sources with Apertures")
-        plt.savefig('test_apertures.png')
+        plt.savefig(f'/Users/spencerfreeman/Desktop/TransitForge/TestData/test_apertures{i}.png')
         
     #cutout should be bkg subtracted
     def cutout_to_table(self, cutout: Cutout2D, bkg: Background2D, frame: CCDData) -> astropy.table.QTable:
@@ -172,14 +176,12 @@ class Photometry:
 
         positions = list(zip(sources['xcentroid'], sources['ycentroid']))
         apertures = [CircularAperture(positions, r=r) for r in self.radii]
-        
-        #TESTING:
-        self.plot_apertures_on_cutout(cutout, apertures)
+ 
         
         # Extract background and its RMS for the same cutout region
         background = bkg.background
         background_rms = bkg.background_rms
-        target_coordinates = self.scale_gui_coords_to_frames(self.target_coordinates_raw)
+        target_coordinates = self._scale_gui_coords_to_frames(self.target_coordinates_raw)
         bg_cutout = Cutout2D(background, position=tuple(target_coordinates), size=Photometry.CUTOUT_SIZE)
         bg_rms_cutout = Cutout2D(background_rms, position=tuple(target_coordinates), size=Photometry.CUTOUT_SIZE)
 
@@ -195,7 +197,7 @@ class Photometry:
         error = calc_total_error(flux_q.value, bg_rms_q.value, 1.0) * u.adu
 
         phot_table = aperture_photometry(cutout.data - bg_cutout.data, apertures, error=error)
-        return phot_table
+        return phot_table, cutout.data, apertures
     
     def _get_gain(self, frame: CCDData):
         return frame.meta.get('GAIN', 1.0)
@@ -241,8 +243,8 @@ class Photometry:
     #pass small coords in 400x400 scale from gui event
     def _transform_coordinates(self, coord_type:str, coords_to_transform: tuple) -> tuple: 
         #scale 400x400 -> 4096x4096
-        x_target_large, y_target_large = self.scale_gui_coords_to_frames(self.target_coordinates_raw) 
-        x_transform_large, y_transform_large = self.scale_gui_coords_to_frames(coords_to_transform)
+        x_target_large, y_target_large = self._scale_gui_coords_to_frames(self.target_coordinates_raw) 
+        x_transform_large, y_transform_large = self._scale_gui_coords_to_frames(coords_to_transform)
         
         #shift to new coordinates (cutout centered on target star, 400x400)
         cutout_center_x, cutout_center_y = self.CUTOUT_SIZE[0]//2, self.CUTOUT_SIZE[1]//2
@@ -251,7 +253,7 @@ class Photometry:
         else: 
             return (x_transform_large-x_target_large+cutout_center_x, y_transform_large-y_target_large+cutout_center_y)
     
-    def get_data(self, phot_table):
+    def retrieve_data(self, phot_table):
         target_coords = self._transform_coordinates('target', self.target_coordinates_raw)
         id_target = self._best_coord_match(phot_table, target_coords)
         self._append_data("target", phot_table, id_target)
@@ -263,6 +265,7 @@ class Photometry:
         validation_coordinates = self._transform_coordinates('validation', self.validation_coordinates_raw)
         id_validation = self._best_coord_match(phot_table, validation_coordinates)
         self._append_data("validation", phot_table, id_validation)
+        return target_coords, comparison_coordinates, validation_coordinates
         
     ######################################################################################################################################################################
     

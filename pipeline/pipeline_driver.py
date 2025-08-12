@@ -27,6 +27,7 @@ class PipelineDriver:
             
             #Perform Photometry
             if self.calibration.output_directory:
+                print('Performing photometry...')
                 self.data_loader = DataLoader(self.calibration.output_directory)
                 reduced_light_frames = self.data_loader.get_science_paths(self.entries['Light Frame Indicator'])
                 self.photometry = Photometry(self.calibration.output_directory, 
@@ -35,11 +36,12 @@ class PipelineDriver:
                                              self.entries['Light Frame Indicator'], 
                                              self.entries['Target Radius'])
                 
-                for reduced_light_frame in reduced_light_frames: 
+                for i,reduced_light_frame in enumerate(reduced_light_frames): 
                     frame_ccd_data, bkg = self.photometry.background_subtract(reduced_light_frame)
                     cutout_ccd_data = self.photometry.get_cutout(frame_ccd_data)
-                    photometry_table = self.photometry.cutout_to_table(cutout_ccd_data, bkg, frame_ccd_data)
-                    self.photometry.get_data(photometry_table)
+                    photometry_table, co, aper = self.photometry.cutout_to_table(cutout_ccd_data, bkg, frame_ccd_data)
+                    target_coords, comparison_coords, validation_coords = self.photometry.retrieve_data(photometry_table)
+                    self.photometry.plot_apertures_on_cutout(co, aper, i, target_coords, comparison_coords, validation_coords)
                     print(self.photometry.data)
             #Plot Results
         else: 
