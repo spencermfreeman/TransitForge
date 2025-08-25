@@ -223,7 +223,10 @@ class Photometry:
         # Compute distances and find index of minimum
         distances = [self._distance(table_coord, coord) for table_coord in coords_list]
         
-        return int(phot_table['id'][min(range(len(distances)), key=lambda i: distances[i])])
+        coord_match_id = int(phot_table['id'][min(range(len(distances)), key=lambda i: distances[i])])
+        coord_match_row = phot_table[phot_table['id'] == coord_match_id]
+        shift = (float(coord_match_row['xcenter'].value - coord[0]), float(coord_match_row['ycenter'].value - coord[1]))
+        return coord_match_id, shift
 
     def _distance(self, coord1: tuple, coord2: tuple) -> float: 
         return math.sqrt((coord2[0] - coord1[0])**2 + (coord2[1] - coord1[1])**2)
@@ -253,17 +256,23 @@ class Photometry:
         else: 
             return (x_transform_large-x_target_large+cutout_center_x, y_transform_large-y_target_large+cutout_center_y)
     
-    def retrieve_data(self, phot_table):
+    def _shift_coordinates(self, coord_type: str, coords_to_shift: tuple) -> tuple: 
+        #shift the coordinates of the target based on the offset from 'coords to shift' and the best match in phot table
+        #this method assumes the inital match is correct and helps prevent large shifts when processing the entire series of images
+        pass
+    
+    def retrieve_data(self, phot_table: astropy.table.QTable):
         target_coords = self._transform_coordinates('target', self.target_coordinates_raw)
-        id_target = self._best_coord_match(phot_table, target_coords)
+        id_target, error = self._best_coord_match(phot_table, target_coords)
+        print("Target error: ", error)
         self._append_data("target", phot_table, id_target)
 
         comparison_coordinates = self._transform_coordinates('comparison', self.comparison_coordinates_raw)
-        id_comparison = self._best_coord_match(phot_table, comparison_coordinates)
+        id_comparison, error = self._best_coord_match(phot_table, comparison_coordinates)
         self._append_data("comparison", phot_table, id_comparison)
         
         validation_coordinates = self._transform_coordinates('validation', self.validation_coordinates_raw)
-        id_validation = self._best_coord_match(phot_table, validation_coordinates)
+        id_validation, error = self._best_coord_match(phot_table, validation_coordinates)
         self._append_data("validation", phot_table, id_validation)
         return target_coords, comparison_coordinates, validation_coordinates
         

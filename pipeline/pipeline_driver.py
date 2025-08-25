@@ -40,6 +40,7 @@ class PipelineDriver:
                     frame_ccd_data, bkg = self.photometry.background_subtract(reduced_light_frame)
                     cutout_ccd_data = self.photometry.get_cutout(frame_ccd_data)
                     photometry_table, co, aper = self.photometry.cutout_to_table(cutout_ccd_data, bkg, frame_ccd_data)
+                    print(photometry_table)
                     target_coords, comparison_coords, validation_coords = self.photometry.retrieve_data(photometry_table)
                     self.photometry.plot_apertures_on_cutout(co, aper, i, target_coords, comparison_coords, validation_coords)
                     print(self.photometry.data)
