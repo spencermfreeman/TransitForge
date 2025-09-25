@@ -12,7 +12,7 @@
 | [GUI Preview](#gui-preview)                       | Some snapshots of TransitForge gui                                      |
 | [Data and Output](#data-and-output)               | TransitForge I/O overview                                               |
 | [Credits](#credits)                               | Meet the team behind this                                               |
-| [License](#license)                               | License details                                                         |
+
 
 # Pipeline Overview
 #### An image pipeline for the calibration and processing of FITS images, equipped with differential photometric techniques. Dependencies include Numpy/Matplotlib, Astropy/Photutils, and Pandas (details in requirements.txt).
@@ -57,5 +57,5 @@
 </p>
 
 # Credits
-
-# License
+Spencer Freeman: backend, shared GUI work 
+Vincent Niedermayer: shared GUI work
