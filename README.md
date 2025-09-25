@@ -57,5 +57,5 @@
 </p>
 
 # Credits
-Spencer Freeman: backend, shared GUI work 
-Vincent Niedermayer: shared GUI work
+- Spencer Freeman: backend, shared GUI work 
+- Vincent Niedermayer: shared GUI work
