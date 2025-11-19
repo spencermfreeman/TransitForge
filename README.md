@@ -22,7 +22,7 @@
 - Target Data: The pipeline aims to support analysis of existing TESS data with libraries such as Astropy, the Photutils sub-package, and personal/group observational data.
 - Functionality: Designed to work similarly to AstroImageJ, but in a more condensed and streamlined manner, tailored to STEPUP operations.
   
-# GUI Preview
+# GUI Preview (In Progress)
 
 <p align="center">
   <img src="./static/file_io.png" width="700" />
