@@ -9,7 +9,7 @@
 | Index                                             | Description                                                             |
 | :------------------------------------------------ | :---------------------------------------------------------------------- |
 | [Pipeline Overview](#pipeline-overview)           | High level overview and basic dependencies                              |
-| [GUI Preview (In Progress)](#gui-preview)                       | Some snapshots of TransitForge gui                                      |
+| [GUI Preview](#gui-preview-in-progress)                       | Some snapshots of TransitForge gui                                      |
 | [Data and Output](#data-and-output)               | TransitForge I/O overview                                               |
 | [Credits](#credits)                               | Meet the team behind this                                               |
 
